@@ -1,4 +1,5 @@
-build/*
-vscode/*
-*/js/*
+vscode/
+**/js/
+**/node_modules/
+bazel*
 .DS-Store

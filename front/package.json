@@ -1,0 +1,12 @@
+{
+  "name": "experimental_boost",
+  "version": "1.0.0",
+  "main": "./client/js/index.js",
+  "license": "MIT",
+  "scripts": {
+    "watch": "tsc -w"
+  },
+  "devDependencies": {
+    "@types/websocket": "^1.0.4"
+  }
+}
