@@ -78,7 +78,7 @@ std::string path_cat(beast::string_view base, beast::string_view path)
 template <class Body, class Allocator, class Send>
 void handle_request(
 	beast::string_view doc_root,
-	http::request<Body,http::basic_fields<Allocator>> &&req,
+	http::request<Body, http::basic_fields<Allocator>> &&req,
 	Send &&send)
 {
 	// Returns a bad request response
