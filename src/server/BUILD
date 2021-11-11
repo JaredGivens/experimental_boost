@@ -6,9 +6,8 @@ cc_library(
 	hdrs = ["ws_session.hh"],
 	deps = [
 		"@boost//:boost",
+		"//src/game:game_session",
 	],
-	linkstatic = 0,
-	alwayslink = 0,
 
 )
 
@@ -20,7 +19,6 @@ cc_library(
 		":ws_session",
 		"@boost//:boost",
 	],
-	alwayslink = 0,
 
 )
 
@@ -32,7 +30,6 @@ cc_library(
 		":http_session",
 		"@boost//:boost",
 	],
-	alwayslink = 0,
 	visibility = ["//visibility:public"],
 )
 
