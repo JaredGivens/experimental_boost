@@ -8,5 +8,8 @@
   },
   "devDependencies": {
     "@types/websocket": "^1.0.4"
+  },
+  "dependencies": {
+    "@rafern/canvas-ui": "^3.4.2"
   }
 }

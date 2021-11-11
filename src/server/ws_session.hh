@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
+#include "../game/game_session.hh"
 
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -25,13 +26,14 @@ class shared_state
 	std::unordered_set<ws_session *> sessions_;
 
 public:
+	std::unique_ptr<game_session> game_;
 	explicit shared_state(std::string doc_root);
 
 	std::string const &doc_root() const noexcept { return doc_root_; }
 
 	void join(ws_session *session);
 	void leave(ws_session *session);
-	void send(std::string message);
+	void send(float *message);
 };
 
 class ws_session : public boost::enable_shared_from_this<ws_session>
@@ -39,7 +41,7 @@ class ws_session : public boost::enable_shared_from_this<ws_session>
 	beast::flat_buffer buffer_;
 	ws::stream<beast::tcp_stream> ws_;
 	boost::shared_ptr<shared_state> state_;
-	std::vector<boost::shared_ptr<std::string const>> queue_;
+	std::vector<float *> queue_;
 
 	void fail(beast::error_code ec, char const *what);
 	void on_accept(beast::error_code ec);
@@ -59,11 +61,11 @@ public:
 
 	// Send a message
 	void
-	send(boost::shared_ptr<std::string const> const &ss);
+	send(float *);
 
 private:
 	void
-	on_send(boost::shared_ptr<std::string const> const &ss);
+	on_send(float *);
 };
 
 template <class Body, class Allocator>

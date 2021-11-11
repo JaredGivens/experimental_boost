@@ -1,7 +1,11 @@
 #include "ws_session.hh"
 #include <iostream>
 
-shared_state::shared_state(std::string doc_root) : doc_root_(std::move(doc_root)) {}
+#if !defined(MESSAGE_SIZE)
+#define MESSAGE_SIZE 16
+#endif
+
+shared_state::shared_state(std::string doc_root) : doc_root_(std::move(doc_root)), game_(boost::make_unique<game_session>()) {}
 
 void shared_state::join(ws_session *session)
 {
@@ -16,10 +20,10 @@ void shared_state::leave(ws_session *session)
 }
 
 // Broadcast a message to all websocket client sessions
-void shared_state::send(std::string message)
+void shared_state::send(float *message)
 {
 	// Put the message in a shared pointer so we can re-use it for each client
-	auto const ss = boost::make_shared<std::string const>(std::move(message));
+	// auto const ss = boost::make_shared<float>(std::move(*message));
 
 	// Make a local list of all the weak pointers representing
 	// the sessions, so we can do the actual sending without
@@ -40,7 +44,7 @@ void shared_state::send(std::string message)
 	{
 		if (auto sp = wp.lock())
 		{
-			sp->send(ss);
+			sp->send(message);
 		}
 	}
 }
@@ -50,6 +54,7 @@ ws_session::ws_session(
 	boost::shared_ptr<shared_state> const &state)
 	: ws_(std::move(socket)), state_(state)
 {
+	ws_.binary(1);
 }
 
 ws_session::~ws_session()
@@ -95,7 +100,7 @@ void ws_session::on_read(beast::error_code ec, std::size_t)
 	}
 
 	// Send to all connections
-	state_->send(beast::buffers_to_string(buffer_.data()));
+	state_->send(state_->game_->data_.get());
 
 	// Clear the buffer
 	buffer_.consume(buffer_.size());
@@ -108,7 +113,7 @@ void ws_session::on_read(beast::error_code ec, std::size_t)
 			shared_from_this()));
 }
 
-void ws_session::send(boost::shared_ptr<std::string const> const &ss)
+void ws_session::send(float *message)
 {
 	// Post our work to the strand, this ensures
 	// that the members of `this` will not be
@@ -119,21 +124,23 @@ void ws_session::send(boost::shared_ptr<std::string const> const &ss)
 		beast::bind_front_handler(
 			&ws_session::on_send,
 			shared_from_this(),
-			ss));
+			message));
 }
 
-void ws_session::on_send(boost::shared_ptr<std::string const> const &ss)
+void ws_session::on_send(float *message)
 {
 	// Always add to queue
-	queue_.push_back(ss);
+	queue_.push_back(message);
 
 	// Are we already writing?
 	if (queue_.size() > 1)
+	{
 		return;
+	}
 
 	// We are not currently writing, so send this immediately
 	ws_.async_write(
-		net::buffer(*queue_.front()),
+		net::buffer(queue_.front(), MESSAGE_SIZE),
 		beast::bind_front_handler(
 			&ws_session::on_write,
 			shared_from_this()));
@@ -143,16 +150,20 @@ void ws_session::on_write(beast::error_code ec, std::size_t)
 {
 	// Handle the error, if any
 	if (ec)
+	{
 		return fail(ec, "write");
+	}
 
 	// Remove the string from the queue
 	queue_.erase(queue_.begin());
 
 	// Send the next message if any
 	if (!queue_.empty())
+	{
 		ws_.async_write(
-			net::buffer(*queue_.front()),
+			net::buffer(queue_.front(), MESSAGE_SIZE),
 			beast::bind_front_handler(
 				&ws_session::on_write,
 				shared_from_this()));
+	}
 }
